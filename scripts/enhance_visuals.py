@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.colors import HexColor, Color
@@ -6,10 +7,12 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from pypdf import PdfReader, PdfWriter
 import math
 
-BASE = Path('/mnt/data/ProjectSauron_CASE-004_REBUILT.pdf')
-OUT = Path('/mnt/data/ProjectSauron_CASE-004_VISUAL_v2.pdf')
-TMP = Path('/mnt/data/_psauron_overlays')
-TMP.mkdir(exist_ok=True)
+ROOT = Path(__file__).resolve().parents[1]
+BUILD_DIR = Path(os.environ.get("PROJECTSAURON_BUILD_DIR", ROOT / ".build"))
+BASE = BUILD_DIR / "ProjectSauron_CASE-004_REBUILT.pdf"
+OUT = BUILD_DIR / "ProjectSauron_CASE-004_VISUAL_v2.pdf"
+TMP = BUILD_DIR / "_psauron_overlays"
+TMP.mkdir(parents=True, exist_ok=True)
 W,H=A4
 
 # Series-aligned palette
