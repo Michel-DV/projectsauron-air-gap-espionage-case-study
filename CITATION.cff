@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this case study in research, training, coursework, or internal documentation, please cite it."
+title: "ProjectSauron / Strider: Air-Gap Espionage Platform - Technical Case Study"
+type: report
+authors:
+  - name: "Michel-DV"
+    alias: "Michel-DV"
+    website: "https://github.com/Michel-DV"
+repository-code: "https://github.com/Michel-DV/projectsauron-air-gap-espionage-case-study"
+url: "https://github.com/Michel-DV/projectsauron-air-gap-espionage-case-study/releases/tag/v1.0.0"
+version: "1.0.0"
+date-released: 2026-10-01
+abstract: >-
+  Technical case study of ProjectSauron / Strider, covering victim-specific implants, memory-resident malware, Windows authentication-process abuse, encrypted virtual filesystems, covert network exfiltration, removable-media tradecraft, and USB-based air-gap bridging.
+keywords:
+  - cybersecurity
+  - malware-analysis
+  - cyber-espionage
+  - ProjectSauron
+  - Strider
+  - Remsec
+  - air-gap
+  - detection-engineering
+  - threat-intelligence
+  - red-team
+license: CC-BY-NC-ND-4.0

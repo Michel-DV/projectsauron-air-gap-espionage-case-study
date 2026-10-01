@@ -1,0 +1,107 @@
+name: Publish ProjectSauron case study
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'report/source.html'
+      - 'report/cover.html'
+      - 'scripts/enhance_visuals.py'
+      - '.github/workflows/publish-report.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PDF dependencies
+        run: pip install --disable-pip-version-check weasyprint pypdf reportlab
+
+      - name: Build publication
+        run: |
+          mkdir -p .build
+          python - <<'PY'
+          from pathlib import Path
+          from weasyprint import HTML
+          from pypdf import PdfReader, PdfWriter
+          root=Path('report'); build=Path('.build')
+          cover=build/'_cover.pdf'; body=build/'_body.pdf'; base=build/'ProjectSauron_CASE-004_REBUILT.pdf'
+          HTML(filename=str(root/'cover.html')).write_pdf(str(cover))
+          HTML(filename=str(root/'source.html')).write_pdf(str(body))
+          cr=PdfReader(str(cover)); br=PdfReader(str(body))
+          if len(cr.pages)!=1: raise SystemExit(f'Expected 1 cover page, got {len(cr.pages)}')
+          if len(br.pages)!=16: raise SystemExit(f'Expected 16 body pages, got {len(br.pages)}')
+          w=PdfWriter()
+          for p in cr.pages: w.add_page(p)
+          for p in br.pages: w.add_page(p)
+          with base.open('wb') as fh: w.write(fh)
+          PY
+
+          sed -i "s#/mnt/data#${GITHUB_WORKSPACE}/.build#g" scripts/enhance_visuals.py
+          python scripts/enhance_visuals.py
+
+          python - <<'PY'
+          from pathlib import Path
+          from pypdf import PdfReader, PdfWriter
+          import hashlib
+          src=Path('.build/ProjectSauron_CASE-004_VISUAL_v2.pdf')
+          out=Path('report/ProjectSauron_Air_Gap_Espionage_Case_Study_Michel-DV.pdf')
+          r=PdfReader(str(src))
+          if len(r.pages)!=17: raise SystemExit(f'Expected 17 total pages, got {len(r.pages)}')
+          w=PdfWriter()
+          for p in r.pages: w.add_page(p)
+          w.add_metadata({
+              '/Title':'ProjectSauron / Strider: Air-Gap Espionage Platform - Technical Case Study',
+              '/Author':'Michel-DV (@Michel-DV)',
+              '/Subject':'Michel-DV Threat Case Studies - CASE-004',
+              '/Creator':'Michel-DV Threat Case Studies',
+              '/Keywords':'ProjectSauron, Strider, Remsec, cyber espionage, air gap, malware analysis, detection engineering'
+          })
+          with out.open('wb') as fh: w.write(fh)
+          final=PdfReader(str(out))
+          if (final.metadata or {}).get('/Author')!='Michel-DV (@Michel-DV)': raise SystemExit('Author metadata missing')
+          digest=hashlib.sha256(out.read_bytes()).hexdigest()
+          Path('report/SHA256SUMS.txt').write_text(f'{digest}  {out.name}\n',encoding='utf-8')
+          print(f'Published {len(final.pages)} pages; SHA-256 {digest}; author={final.metadata.get("/Author")}')
+          PY
+          rm -rf .build
+
+      - name: Commit generated publication
+        run: |
+          git config user.name "Michel-DV"
+          git config user.email "232046078+Michel-DV@users.noreply.github.com"
+          git add report/ProjectSauron_Air_Gap_Espionage_Case_Study_Michel-DV.pdf report/SHA256SUMS.txt
+          if git diff --cached --quiet; then
+            echo "Generated publication unchanged"
+          else
+            git commit -m "release: publish ProjectSauron case study v1.0.0"
+            git push
+          fi
+
+      - name: Publish or refresh v1.0.0 release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ASSET="report/ProjectSauron_Air_Gap_Espionage_Case_Study_Michel-DV.pdf"
+          if gh release view v1.0.0 >/dev/null 2>&1; then
+            gh release upload v1.0.0 "$ASSET#ProjectSauron Air-Gap Espionage Case Study PDF" --clobber
+          else
+            gh release create v1.0.0 "$ASSET#ProjectSauron Air-Gap Espionage Case Study PDF" \
+              --target "$(git rev-parse HEAD)" \
+              --title "ProjectSauron Air-Gap Espionage Case Study - v1.0.0" \
+              --notes-file RELEASE_NOTES.md
+          fi
